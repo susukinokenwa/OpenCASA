@@ -29,5 +29,7 @@ function choice(weights){
 }
 
 // filters out invalid display for invalid numbers such as NaN etc and displays "-" instead...
-function fmt(v,d=1){ return (v===undefined||v===null||isNaN(v)) ? "-" : v.toFixed(d); }
+function fmt(v,d=1){ 
+    return (v===undefined||v===null||isNaN(v)) ? "-" : v.toFixed(d); 
+}
 

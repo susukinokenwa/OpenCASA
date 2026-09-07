@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Open CASA</title>
+</head>
+<body>
+    
+<header>
+  <div class="brand">
+    <div class="logo">CASA</div>
+    <div>
+      <div class="brand-title">CASA Web</div>
+      <div class="brand-sub">Sperm Motility &amp; Morphometry Analysis Tool (Offline-Ready)</div>
+    </div>
+  </div>
+  <div class="header-actions">
+    <button class="btn-green" id="btnLoadDemo">⟳ Load Sample Video</button>
+    <button class="btn-indigo" id="btnUpload">⭱ Upload Video</button>
+    <input type="file" id="fileInput" accept="video/*" style="display:none" />
+  </div>
+</header>
+
+<div class="layout">
+    <div class="sidebar">
+        <h2><span class="ico">▤</span>Analysis Parameters</h2>
+
+        <div class="field">
+            <label for="" id="lblThreshold">Image Analysis Threshold 30</label>
+            <input type="range" id="threshold" min="0" max="100" step="1" value="30" />
+            <div class="hint">Controls the sensitivity for separating cells from the background (higher values filter out more). 
+                When uploading a video, this value is applied directly to frame-by-frame binarization.
+            </div>
+        </div>
+
+        <div class="field">
+            <label>Calibration</label>
+            <div class="input-suffix">
+                <input type="number" id="calibration" value="1.2" step="0.1">
+                <span>&mu;m / pixel</span>
+            </div>
+        </div>
+
+        <div class="field">
+            <label >Frame Rate</label>
+            <div class="input-suffix">
+                <input type="number" id="frameRate" value="60"> 
+                <span>FPS</span>
+            </div>
+        </div>
+
+        <div class="field">
+            <label>Cell Size Limits (pixels)</label>
+            <div class="grid2">
+                <div>
+                    <div class="sub-label">Minimum Value</div>
+                    <input type="number" id="minArea" value="10" />
+                </div>
+                <div>
+                    <div class="sub-label">Maximum Value</div>
+                    <input type="number" id="maxArea" value="100">
+                </div>
+            </div>
+        </div>
+
+        
+        <div class="field">
+            <label>Search Radius</label>
+            <div class="input-suffix">
+                <input type="number" id="searchRadius" value="25" />
+                <span>pixels</span>
+            </div>
+            <div class="hint">The maximum pixel distance a cell can move between adjacent frames 
+                (calculated based on the video's original resolution).
+            </div>
+        </div>
+
+        <div class="field">
+            <label>Minimum Path Length</label>
+            <div class="input-suffix">
+                <input type="number" id="minPathLength" value="10" />
+                <span>frames</span>
+            </div>
+        </div>
+        
+        <hr class="sep" />
+        <h3 class="sub">Motility Cutoffs</h3>
+        <div class="field">
+            <label>Progressive Motility VAP Threshold (PR VAP)</label>
+            <div class="input-suffix">
+                <input type="number" id="prVAP" value="25" />
+                <span>µm/s</span>
+            </div>
+        </div>
+
+        
+        <div class="field">
+            <label id="lblPrSTR">Progressive Motility STR Threshold (PR STR) 0.80</label>
+            <input type="range" id="prSTR" min="0" max="1" step="0.01" value="0.8" />
+        </div>
+
+        <div class="field">
+            <label>Motility VCL Threshold (Motile VCL)</label>
+            <div class="input-suffix">
+                <input type="number" id="motileVCL" value="5" />
+                <span>µm/s</span>
+            </div>
+        </div>
+
+        <hr class="sep" />
+        <label class="checkbox-row">
+        <input type="checkbox" id="invertImage" checked />
+        <span>Invert image (dark cells on a light background)</span>
+        </label>
+        <label class="checkbox-row">
+        <input type="checkbox" id="backgroundSubtraction" checked />
+        <span>Enable background subtraction (filters out debris and dead cells)</span>
+        </label>
+
+        <button class="btn-primary" id="btnReanalyze" disabled>⟲ Reanalyze</button>
+    </div>
+
+    <!-- main!! -->
+    <div class="main">
+        <div class="status" id="statusBox"><span class="dot"></span><span id="statusMsg">Load demo data or upload a sperm analysis video to begin.</span></div>
+
+        <div class="card">
+            <div class="card-head" style="margin-bottom:8px;">
+                <div class="card-title"><span class="ico"></span>Video Preview / Tracking Results</div>
+                <span class="source-tag" id="sourceTag" style="display:none;"></span>
+            </div>
+            <div class="video-wrap">
+                <canvas id="videoCanvas" width="660" height="400"></canvas>
+            </div>
+            <div class="controls">
+                <button class="play-btn" id="btnPlay" disabled>▶</button>
+                <span class="frame-label" id="frameLabel">Frame: 0 / 0</span>
+                <input type="range" id="frameSlider" min="0" max="79" value="0" disabled />
+                <label class="binary-toggle">
+                <input type="checkbox" id="showBinary" />Show Binarized Image</label>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-head">
+                <div class="card-title"><span class="ico">☰</span>Analysis Results</div>
+                <button class="btn-ghost" id="btnExport" disabled>⭳ Export CSV Report</button>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Total Cells Tracked</div>
+                    <div class="stat-value" id="statTotal">-</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Motility %</div>
+                    <div class="stat-value indigo" id="statMotility">-</div>
+                    <div class="stat-sub" id="statMotilitySub"></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Progressive %</div>
+                    <div class="stat-value emerald" id="statProgressive">-</div>
+                    <div class="stat-sub" id="statProgressiveSub"></div>
+                </div>
+                <div class="legend-card">
+                    <div class="legend-row">
+                        <span class="lbl"><span class="legend-dot" style="background:#34d399"></span>Progressive:</span>
+                        <span id="legendPR">-</span>
+                    </div>
+                    <div class="legend-row">
+                        <span class="lbl"><span class="legend-dot" style="background:#f59e0b"></span>Non-Progressive:</span>
+                        <span id="legendNP">-</span>
+                    </div>
+                    <div class="legend-row">
+                        <span class="lbl"><span class="legend-dot" style="background:#ef4444"></span>Imotality:</span>
+                        <span id="legendIM">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="metrics-grid">
+                <div><div class="metric-label">Curvilinear Velocity (VCL)</div><div class="metric-value" id="mVCL">-<span class="metric-unit">µm/s</span></div></div>
+                <div><div class="metric-label">Straight-Line Velocity (VSL)</div><div class="metric-value" id="mVSL">-<span class="metric-unit">µm/s</span></div></div>
+                <div><div class="metric-label">Average Path Velocity (VAP)</div><div class="metric-value" id="mVAP">-<span class="metric-unit">µm/s</span></div></div>
+                <div><div class="metric-label">Linearity LIN (VSL/VCL)</div><div class="metric-value" id="mLIN">-</div></div>
+                <div><div class="metric-label">Straightness STR (VSL/VAP)</div><div class="metric-value" id="mSTR">-</div></div>
+                <div><div class="metric-label">Wobble WOB (VAP/VCL)</div><div class="metric-value" id="mWOB">-</div></div>
+                <div><div class="metric-label">Amplitude of Lateral Head Displacement (ALH)</div><div class="metric-value" id="mALH">-<span class="metric-unit">µm</span></div></div>
+                <div><div class="metric-label">Beat Cross Frequency (BCF)</div><div class="metric-value" id="mBCF">-<span class="metric-unit">Hz</span></div></div>
+            </div>
+        </div>
+
+        <div class="two-col">
+            <div class="card">
+                <div class="card-title" style="margin-bottom:16px;"><span class="ico">☰</span>Velocity Distribution Histograms</div>
+                <div class="hist-grid">
+                    <div class="hist-canvas-wrap">
+                        <div class="hist-title">VCL Distribution</div>
+                        <canvas id="histVCL" width="200" height="150"></canvas>
+                    </div>
+                    <div class="hist-canvas-wrap">
+                        <div class="hist-title">VSL Distribution</div>
+                        <canvas id="histVSL" width="200" height="150"></canvas>
+                    </div>
+                    <div class="hist-canvas-wrap">
+                        <div class="hist-title">VAP Distribution</div>
+                        <canvas id="histVAP" width="200" height="150"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-head">
+                <div class="card-title"><span class="ico">☰</span>Track Detail Table</div>
+                <span style="font-size:12px;color:var(--muted2)">Total Tracks: <span id="trackCount">0</span></span>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Type</th>
+                                <th>VCL (µm/s)</th>
+                                <th>VSL (µm/s)</th>
+                                <th>VAP (µm/s)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody">
+                            <tr>
+                                <td colspan="5" class="table-empty">No Data</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer-note" id="footerNote">示範模式：精子軌跡由前端隨機模擬產生。上傳真實影片後，此工具會在瀏覽器內以真實像素資料進行閾值分割與逐幀追蹤。</div>
+    </div>
+
+</div>
+
+
+
+    <link rel="stylesheet" href="./style.css">
+    <script src="./script.js"></script>
+</body>
+</html>

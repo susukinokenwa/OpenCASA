@@ -30,6 +30,45 @@ function choice(weights){
 
 // filters out invalid display for invalid numbers such as NaN etc and displays "-" instead...
 function fmt(v,d=1){ 
-    return (v===undefined||v===null||isNaN(v)) ? "-" : v.toFixed(d); 
+    if(v === undefined || v === null || isNaN(v)) {
+        return "-" 
+    }
+    return v.toFixed(d); 
 }
+
+// parameters from html or default
+let params = {
+  threshold: 30, 
+  calibration: 1.2, 
+  frameRate: 60,
+  minArea: 10, 
+  maxArea: 100, 
+  searchRadius: 25, 
+  minPathLength: 10,
+  prVAP: 25, 
+  prSTR: 0.8, 
+  motileVCL: 5,
+  invertImage: true, 
+  backgroundSubtraction: true
+};
+
+let sourceType = "none";     // "none" / "demo" / "video"
+let N_FRAMES = DEMO_FRAMES;  // active frame count for playback slider
+
+// holds fake cells for demo vid
+let rawCells = null;
+
+// video mode
+let videoFrames = null;      // array of ImageData (native-resolution, or downscaled only if huge), per captured frame
+let workDims = {w: 220, h: 150};
+
+let analyzed = false;// flag if analyzed
+let currentFrame = 0; // which frame is video on
+let playing = false; // is video animating
+let playTimer = null; // current time frame, used to play or stop
+let showBinary = false; // if the binary checkbox is checked or not
+
+let analysisRows = [];   // {cell, path, metrics, cls}
+let validRows = []; // analysisRows with invalid cells being filtered..
+
 

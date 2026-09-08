@@ -359,4 +359,133 @@ function detectBlobs(fg, width, height, minArea, maxArea){
     return blobs; // return array
 }
 
+// frame to frame tracking
+function trackBlobs(framesBlobs, searchRadius){
+    const tracks = [];
+    let nextId = 1;
 
+    framesBlobs.forEach((blobs)=>{
+        const used = new Array(blobs.length).fill(false);
+
+        tracks.forEach((track)=>{
+
+            if(!track.active) return;
+            let best = -1, bestDist = Infinity;
+
+            blobs.forEach((b, bi)=>{
+            
+                if(used[bi]) return;
+                const d = Math.hypot(b.x-track.lastX, b.y-track.lastY);
+                if(d < bestDist){ 
+                    bestDist = d; best = bi; 
+                }
+            });
+
+            if(best >= 0 && bestDist <= searchRadius){
+                const b = blobs[best];
+                used[best] = true;
+                track.points.push([b.x, b.y]);
+                track.areaArr.push(b.area); track.widthArr.push(b.width);
+                track.heightArr.push(b.height); track.circArr.push(b.circularity);
+                track.lastX = b.x; track.lastY = b.y; track.missed = 0;
+            } else {
+                track.missed++;
+                if(track.missed > 5) track.active = false;
+            }
+        });
+
+        blobs.forEach((b, bi)=>{
+            if(used[bi]) return;
+            tracks.push({
+                id: nextId++, 
+                points: [[b.x,b.y]],
+                areaArr:[b.area], 
+                widthArr:[b.width], 
+                heightArr:[b.height], 
+                circArr:[b.circularity],
+                lastX: b.x, 
+                lastY: b.y, 
+                missed: 0, 
+                active: true
+            });
+        });
+    });
+
+    return tracks.map(t => ({
+        id: t.id,
+        points: t.points,
+        area: avg(t.areaArr), 
+        width: avg(t.widthArr), 
+        height: avg(t.heightArr), 
+        circularity: avg(t.circArr),
+        trackLength: t.points.length
+    }));
+}
+
+// run video processing 
+function runVideoDetectionPipeline(){
+    setStatus("Detecting and tracking sperm trajectories...");
+    const framesBlobs = videoFrames.map(fd => {
+        const fg = thresholdFrame(fd, params.threshold, params.invertImage);
+        return detectBlobs(fg, fd.width, fd.height, params.minArea, params.maxArea);
+    });
+
+    const rawTracks = trackBlobs(framesBlobs, params.searchRadius);
+
+    analysisRows = rawTracks.map(t=>{
+        const cellObj = { 
+            id:t.id, 
+            area:t.area, 
+            width:t.width, 
+            height:t.height, 
+            circularity:t.circularity, 
+            trackLength:t.trackLength, 
+            intensity:100 
+        };
+        const metrics = computeMetrics(t.points, params);
+        const cls = classify(cellObj, metrics, params);
+        return { cell: cellObj, path: t.points, metrics, cls };
+    });
+    validRows = analysisRows.filter(r => r.cls);
+    renumberValidRows();
+    analyzed = true;
+    currentFrame = 0;
+    document.getElementById("btnReanalyze").disabled = false;
+
+    if(validRows.length === 0){
+        setStatus("Analysis complete, but no matching trajectories were detected. Please try adjusting the thresholds, area limits, or inverted image settings, then click 'Reanalyze'.", true);
+    } else {
+        setStatus(`Analysis complete! A total of ${validRows.length} valid sperm trajectories were tracked from your uploaded video.`);
+    }
+    renderAll();
+}
+
+// stuff for demo -------------------------
+function recomputeDemo(){
+    if(!rawCells){ 
+        analysisRows = []; 
+        validRows = []; 
+        return; 
+    }
+    analysisRows = rawCells.map(cell => {
+        const path = cellPath(cell);
+        const metrics = computeMetrics(path, params);
+        const cls = classify(cell, metrics, params);
+        return { cell, path, metrics, cls };
+    });
+    validRows = analysisRows.filter(r=>r.cls);
+    renumberValidRows();
+}
+
+// Give only the tracks that survive filtering clean sequential IDs (1..N),
+// instead of showing their raw pre-filter detection order (which can jump
+// into the thousands once you include filtered-out noise fragments).
+function renumberValidRows(){
+    validRows
+    .slice()
+    .sort((a, b)=> a.cell.id - b.cell.id)
+    .forEach((row, i)=>{ row.cell.id = i + 1; });
+}
+
+
+// final Rendering

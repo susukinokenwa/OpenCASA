@@ -229,3 +229,21 @@ function seekTo(video, t){
         video.currentTime = t;
   });
 }
+
+// process video
+async function captureVideoProcessing(file){
+    // create a element and link it to the source
+    const video = document.createElement("video");
+    video.muted = true;
+    video.playsInline = true;
+    const url = URL.createObjectURL(file);
+    video.src = url;
+
+    //promise
+    await new Promise(function (resolve, reject){
+        video.onloadedmetadata = resolve; // if video loaded
+        video.onerror = ()=>reject(new Error("Error Reading the File")); // if video didnt
+    })
+    
+
+}

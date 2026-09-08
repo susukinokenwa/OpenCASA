@@ -244,6 +244,34 @@ async function captureVideoProcessing(file){
         video.onloadedmetadata = resolve; // if video loaded
         video.onerror = ()=>reject(new Error("Error Reading the File")); // if video didnt
     })
-    
+
+    const vw = video.videoWidth || 320, vh = video.videoHeight || 240;
+    // Analyze at the video's native resolution so small/faint cells aren't lost to downscaling.
+    // Only shrink if the source is wider than ANALYSIS_MAX_W (keeps very large uploads responsive).
+    const workW = Math.min(vw, ANALYSIS_MAX_W);
+    const workH = Math.round(workW * vh / vw); // make sure if downscaled it stays the same ratio
+    // safety check for video frames
+    if(frameCount < 2){
+        URL.revokeObjectURL(url); // revoke the url produced earlier
+        throw new Error("The video is too short or the frame rate is too low. Please upload a longer clip or increase the frame rate and try again.");
+    }
+    // hidden canvas to grab image frames
+    const tmp = document.createElement("canvas");
+    tmp.width = workW; tmp.height = workH;
+    const tctx = tmp.getContext("2d", { willReadFrequently: true });
+
+    const frames = []; // array of each frame's data
+    for(let i = 0; i < frameCount; i++){
+        const t = Math.min(Math.max(0, duration - 0.02), i / params.frameRate);
+        await seekTo(video, t);
+        tctx.clearRect(0, 0, workW, workH);
+        tctx.drawImage(video, 0, 0, workW, workH);
+        frames.push(tctx.getImageData(0, 0,workW, workH)); // draw image on canvas
+        if(i % 8 === 0 || i === frameCount-1){
+            setStatus(`Loading Video Frames... (${i+1}/${frameCount})`); // update front-end UI
+        }
+    }
+    URL.revokeObjectURL(url); // revoke url since we done
+    return { frames, workW, workH };
 
 }

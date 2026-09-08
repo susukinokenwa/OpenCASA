@@ -261,13 +261,14 @@ async function captureVideoProcessing(file){
     const tctx = tmp.getContext("2d", { willReadFrequently: true });
 
     const frames = []; // array of each frame's data
+
     for(let i = 0; i < frameCount; i++){
         const t = Math.min(Math.max(0, duration - 0.02), i / params.frameRate);
         await seekTo(video, t);
         tctx.clearRect(0, 0, workW, workH);
         tctx.drawImage(video, 0, 0, workW, workH);
         frames.push(tctx.getImageData(0, 0,workW, workH)); // draw image on canvas
-        if(i % 8 === 0 || i === frameCount-1){
+        if(i % 8 === 0 || i === frameCount-1){ // update every 8 frames
             setStatus(`Loading Video Frames... (${i+1}/${frameCount})`); // update front-end UI
         }
     }
@@ -275,3 +276,87 @@ async function captureVideoProcessing(file){
     return { frames, workW, workH };
 
 }
+
+
+// Threshold a frame into a binary foreground mask (Uint8Array of 0/1)
+function thresholdFrame(imageData, threshold, invert){
+    const { data, width, height } = imageData; // data from function above
+    const total = width * height; // total amount of pixels in an image
+    const fg = new Uint8Array(total); // array for storing 1 or 0
+    const threshVal = (threshold / 100) * 255;  // rescaling since our slidebar on website is only 1 - 100
+    for(let p = 0; p < total; p++){
+        const i = p * 4;
+        const lum = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+        fg[p] = (invert ? lum < threshVal : lum > threshVal) ? 1 : 0;
+    }// invert: is the video black and white flipped, if yes,foreground is darker and background is white vise versa
+    return fg; // return array of 0 and 1
+}
+
+// Connected-component blob detection on a binary mask (4-connectivity, iterative flood fill)
+function detectBlobs(fg, width, height, minArea, maxArea){
+    const total = width * height; // totall amount of pixels
+    const visited = new Uint8Array(total); // array of visited pixels
+    const blobs = []; // array for storing blobs
+    const stack = new Int32Array(total); // array for unchecked pixels?
+
+    for(let idx = 0; idx < total; idx++){
+        if(!fg[idx] || visited[idx]) continue; // if the fg is 0 and if visited before, skip
+        let sp = 0; // pointer to next empty slot
+        stack[sp] = idx; sp += 1; //  input the data and point to next empty spot
+        visited[idx] = 1; // mark as visited
+        let count = 0, sumX = 0, sumY = 0, minX = width, maxX = 0, minY = height, maxY = 0;
+        while(sp > 0){
+            sp -= 1; // return back to the last non empty spot
+            const cur = stack[sp]; // read the last not empty spot
+            const cx = cur % width; // x coordinate on canvas
+            const cy = (cur / width) | 0; // y coordinate on plane
+            count++; // number of pixels in this blob
+            sumX += cx; sumY += cy;// sum coordinates
+
+            if(cx < minX) minX = cx; 
+            if(cx > maxX) maxX = cx;
+            if(cy < minY) minY = cy; 
+            if(cy > maxY) maxY = cy;// finding x and y borders of the blob. like a rectangle
+        
+            if(cx > 0){ // if not on the left border
+                const n = cur - 1; // check left point
+                if(fg[n] && !visited[n]){ // if is 1 and not visited
+                    visited[n] = 1; stack[sp++] = n; // push to stack
+                } 
+            }
+            if(cx < width - 1){ // if not on right border 
+                const n = cur + 1; //check right point
+                if(fg[n] && !visited[n]){
+                    visited[n] = 1; stack[sp++] = n; 
+                } 
+            }
+            if(cy > 0){ // if not on top border
+                const n = cur - width; 
+                if(fg[n] && !visited[n]){ 
+                    visited[n] = 1; stack[sp++] = n; 
+                } 
+            }
+            if(cy < height - 1){ // if not on bottom border
+                const n=cur+width; 
+                if(fg[n] && !visited[n]){ 
+                    visited[n]=1; stack[sp++]=n; 
+                } 
+            }
+        }
+        if(count >= minArea && count <= maxArea){ // if is clasified as a blob
+            const w = maxX - minX + 1, h = maxY - minY + 1; // find width of rectangle
+            const extent = count / Math.max(1, w * h); // how circular it is
+            blobs.push({ 
+                x: sumX / count, // x coordinate of COM
+                y: sumY/count, // y ^^
+                area: count, 
+                width: w, // width of rectangle
+                height: h, // hight ^^
+                circularity: Math.min(1, extent) //circularity
+            });
+        }
+    }
+    return blobs; // return array
+}
+
+

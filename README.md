@@ -1,12 +1,12 @@
 # CASA Web
 This is an opensourced web based Computer Assisted Semen Analysis program. Providing a quick and simple way to analyze semen motality. 
-<br>
+
 ## Features
 - Each cell will be classified into one of the three categories: 
     1. PR (Progressive)
     2. NP (non-progressive)
     3. IM (Immotile)  
-<br>
+
 - The following data will be provided for each cell identified: 
     1. VCL(um/s) — Curvilinear Velocity
     2. VSL(um/s) — Straight-Line Velocity
@@ -16,13 +16,14 @@ This is an opensourced web based Computer Assisted Semen Analysis program. Provi
     6. WOB — Wobble (VAP / VCL)
     7. ALH(um) — Amplitude of Lateral Head Displacement
     8. BCF(Hz) — Beat-Cross Frequency  
-<br>
+
 - The above Data Will also be calculated as Average
 - Displays the Overall Distribution of VAP, VCL and VSL
 - Exports a .csv with the Calculated Data
     
 
 ## Instructions
+
 1. click on Upload video Button
 2. Upload your video
 3. Enter the Threshold values

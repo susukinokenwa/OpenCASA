@@ -19,7 +19,7 @@ function rand(max, min){// randomize data for demo
 
 // calculates the average of the array, can be used for VCL, etc.
 function avg(arr){ 
-    if(arr.length) return arr.reduce((a,b) => {a+b},0)/arr.length;
+    if(arr.length) return arr.reduce((a,b) => { return a + b},0)/arr.length;
     return 0;
 }
 function choice(weights){
@@ -212,7 +212,7 @@ function classify(cell, m, p){ // clasiffy each cell as IM, PR, NP or null if no
   if(cell.trackLength < p.minPathLength) return null;
   if(cell.area < p.minArea || cell.area > p.maxArea) return null;
   if(cell.intensity < p.threshold) return null;
-  if(p.backgroundSubtraction && cell.circularity < 0.8) return null;
+  if(p.backgroundSubtraction && cell.circularity < 0.5) return null;
   if(m.VCL < p.motileVCL) return "IM";
   if(m.VAP >= p.prVAP && m.STR >= p.prSTR) return "PR";
   return "NP";
@@ -232,7 +232,7 @@ function seekTo(video, t){
 }
 
 // process video
-async function captureVideoProcessing(file){
+async function captureVideoFrames(file){
     // create a element and link it to the source
     const video = document.createElement("video");
     video.muted = true;
@@ -252,6 +252,8 @@ async function captureVideoProcessing(file){
     const workW = Math.min(vw, ANALYSIS_MAX_W);
     const workH = Math.round(workW * vh / vw); // make sure if downscaled it stays the same ratio
     // safety check for video frames
+    const duration = video.duration || 0;
+    const frameCount = Math.max(0, Math.min(MAX_VIDEO_FRAMES, Math.floor(duration * params.frameRate)));
     if(frameCount < 2){
         URL.revokeObjectURL(url); // revoke the url produced earlier
         throw new Error("The video is too short or the frame rate is too low. Please upload a longer clip or increase the frame rate and try again.");
@@ -391,7 +393,7 @@ function trackBlobs(framesBlobs, searchRadius){
                 track.lastX = b.x; track.lastY = b.y; track.missed = 0;
             } else {
                 track.missed++;
-                if(track.missed > 5) track.active = false;
+                if(track.missed > 15) track.active = false;
             }
         });
 
@@ -551,7 +553,7 @@ function renderAll(){
 
     //   renderHistograms(); ////// these r not written yet gg///
     //   renderTable();
-    //   drawCanvas();
+    drawCanvas();
 
     document.getElementById("frameLabel").textContent = `Frame: ${analyzed?currentFrame:0} / ${analyzed?N_FRAMES:0}`;
     const slider = document.getElementById("frameSlider");
@@ -562,11 +564,17 @@ function renderAll(){
     document.getElementById("btnPlay").textContent = playing ? "❚❚" : "▶"; // [laybtn]
 }
 
-// function  renderHistograms(){}
-//  function renderTable(){}
-//  function drawCanvas(){}
+function renderHistograms(){
 
-// final Rendering
+}
+
+function renderTable(){
+
+}
+
+
+
+// final Rendering ---------------------------------------
 const displayTmpCanvas = document.createElement("canvas");// canvas
 
 function workToDisplayTransform(){
@@ -618,7 +626,7 @@ function drawCanvas(){
         ctx.imageSmoothingEnabled = true;
         ctx.drawImage(displayTmpCanvas, offsetX, offsetY, drawW, drawH);
 
-        const trail = 26; // longest possible trail
+        const trail = 80; // longest possible trail
         validRows.forEach(({path, cls})=>{
             if(currentFrame >= path.length) return; // if path alreayd ended
             const start = Math.max(0, currentFrame - trail); 
@@ -732,16 +740,74 @@ async function handleFileChosen(e){
 
 
 ///Renders
+function handleReanalyze(){
 
+}
+
+function togglePlay(){
+    playing = !playing;
+    if(playing){
+        playTimer = setInterval(()=>{
+            currentFrame = (currentFrame >= N_FRAMES-1) ? 0 : currentFrame+1;
+            renderAll();
+        }, 70);
+    } else {
+        clearInterval(playTimer);
+    }
+    renderAll();
+}
+
+function exportCSV(){
+
+}
 
 
 //wiring up events with elements
 document.getElementById("btnLoadDemo").addEventListener("click", handleLoadDemo);
+document.getElementById("btnUpload").addEventListener("click", () => document.getElementById("fileInput").click());
+document.getElementById("fileInput").addEventListener("change", handleFileChosen);
+document.getElementById("btnReanalyze").addEventListener("click", handleReanalyze);
+document.getElementById("btnExport").addEventListener("click", exportCSV); //
+document.getElementById("btnPlay").addEventListener("click", togglePlay);
+
+document.getElementById("frameSlider").addEventListener("input", (e)=>{
+    stopPlayback();
+    currentFrame = Number(e.target.value);
+    renderAll();
+});
+document.getElementById("showBinary").addEventListener("change", (e)=>{
+    showBinary = e.target.checked;
+    renderAll();
+});
+
+function bindNumber(id, key){
+    document.getElementById(id).addEventListener("input", (e)=>{
+        params[key] = Number(e.target.value);
+    });
+}
+function bindCheckbox(id, key){
+    document.getElementById(id).addEventListener("change", (e)=>{
+        params[key] = e.target.checked;
+        drawCanvas();
+    });
+}
+
+bindNumber("calibration","calibration");
+bindNumber("frameRate","frameRate");
+bindNumber("minArea","minArea");
+bindNumber("maxArea","maxArea");
+bindNumber("searchRadius","searchRadius");
+bindNumber("minPathLength","minPathLength");
+bindNumber("prVAP","prVAP");
+bindNumber("motileVCL","motileVCL");
+bindCheckbox("invertImage","invertImage");
+bindCheckbox("backgroundSubtraction","backgroundSubtraction");
+
 document.getElementById("threshold").addEventListener("input",(e)=>{
-  params.threshold = Number(e.target.value);
-  document.getElementById("lblThreshold").textContent = `Threshold ${params.threshold}`;
+    params.threshold = Number(e.target.value);
+    document.getElementById("lblThreshold").textContent = `Threshold ${params.threshold}`;
 });
 document.getElementById("prSTR").addEventListener("input",(e)=>{
-  params.prSTR = Number(e.target.value);
-  document.getElementById("lblPrSTR").textContent = `Progressive STR Threshold (PR STR)  ${params.prSTR.toFixed(2)}`;
+    params.prSTR = Number(e.target.value);
+    document.getElementById("lblPrSTR").textContent = `Progressive STR Threshold (PR STR)  ${params.prSTR.toFixed(2)}`;
 });

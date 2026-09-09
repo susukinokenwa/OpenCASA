@@ -483,9 +483,121 @@ function recomputeDemo(){
 function renumberValidRows(){
     validRows
     .slice()
-    .sort((a, b)=> a.cell.id - b.cell.id)
-    .forEach((row, i)=>{ row.cell.id = i + 1; });
+    .sort((a, b) => a.cell.id - b.cell.id)
+    .forEach((row, i) => { row.cell.id = i + 1; });
 }
 
 
 // final Rendering
+const displayTmpCanvas = document.createElement("canvas");// canvas
+
+function workToDisplayTransform(){
+    const w = workDims.w, h = workDims.h;
+    const scale = Math.min(CANVAS_W / w, CANVAS_H / h);
+    const drawW = w*scale, drawH = h*scale;
+    const offsetX = (CANVAS_W-drawW)/2, offsetY = (CANVAS_H-drawH)/2;
+    return { scale, drawW, drawH, offsetX, offsetY };
+}
+
+/// draw canvas
+function drawCanvas(){
+    const canvas = document.getElementById("videoCanvas");
+    const ctx = canvas.getContext("2d");
+    ctx.clearRect(0,0,CANVAS_W,CANVAS_H);
+    ctx.fillStyle = "#000"; 
+    ctx.fillRect(0,0,CANVAS_W,CANVAS_H);
+
+    if(!analyzed) return;  // if not analyzed yet
+
+    if(sourceType === "video"){// real video branch
+        const frame = videoFrames[currentFrame];
+        if(!frame) return;
+        const { scale, drawW, drawH, offsetX, offsetY } = workToDisplayTransform();
+        // if showBinary is on
+        if(showBinary){
+            const fg = thresholdFrame(frame, params.threshold, params.invertImage);
+            const w = frame.width, h = frame.height;
+            const bin = ctx.createImageData(w, h);
+            for(let p = 0; p < w * h; p++){
+                const v = fg[p] ? 255 : 0;
+                bin.data[p * 4] = v; 
+                bin.data[p * 4 + 1] = v; 
+                bin.data[p * 4 + 2] = v; 
+                bin.data[p * 4 + 3] = 255;
+            }
+            displayTmpCanvas.width = w; 
+            displayTmpCanvas.height = h;
+            displayTmpCanvas.getContext("2d").putImageData(bin, 0, 0);
+            ctx.imageSmoothingEnabled = false;
+            ctx.drawImage(displayTmpCanvas, offsetX, offsetY, drawW, drawH);
+            return;
+        }
+
+        displayTmpCanvas.width = frame.width; 
+        displayTmpCanvas.height = frame.height;
+        displayTmpCanvas.getContext("2d").putImageData(frame, 0, 0);
+        ctx.imageSmoothingEnabled = true;
+        ctx.drawImage(displayTmpCanvas, offsetX, offsetY, drawW, drawH);
+
+        const trail = 26; // longest possible trail
+        validRows.forEach(({path, cls})=>{
+            if(currentFrame >= path.length) return; // if path alreayd ended
+            const start = Math.max(0, currentFrame - trail); 
+            ctx.strokeStyle = COLORS[cls]; 
+            ctx.lineWidth = 1.4; 
+            ctx.globalAlpha = 0.9;
+            ctx.beginPath();
+            for(let i = start;i <= currentFrame; i++){
+                const [wx, wy] = path[i];
+                const x = offsetX + wx * scale, y = offsetY + wy * scale;
+                if(i === start) ctx.moveTo(x, y); 
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+            ctx.globalAlpha = 1;
+            const [wx,wy] = path[currentFrame];
+            ctx.fillStyle = COLORS[cls];
+            ctx.beginPath(); ctx.arc(offsetX + wx * scale, offsetY + wy * scale, 3.5, 0, Math.PI * 2); 
+            ctx.fill();
+        });
+        return;
+    }
+
+  // demo (simulated) mode -----------
+    if(showBinary){
+        ctx.fillStyle = "#fff";
+        validRows.forEach(({path}) => {
+            if(currentFrame >= path.length) return;
+            const [x,y] = path[currentFrame];
+            ctx.beginPath(); 
+            ctx.arc(x, y, 2.4, 0, Math.PI * 2); 
+            ctx.fill();
+        });
+        return;
+    }
+
+    const bg = params.invertImage ? "#e7e9ee" : "#0b0d12";
+    ctx.fillStyle = bg; 
+    ctx.fillRect(FIELD_L,0,FIELD_R-FIELD_L,CANVAS_H);
+
+    const trail = 26;
+    validRows.forEach(({path, cls}) => {
+        if(currentFrame >= path.length) return;
+        const start = Math.max(0, currentFrame - trail);
+        ctx.strokeStyle = COLORS[cls]; 
+        ctx.lineWidth = 1.2; 
+        ctx.globalAlpha = 0.85;
+        ctx.beginPath();
+        for(let i = start; i <= currentFrame; i++){
+            const [x,y] = path[i];
+            if(i === start) ctx.moveTo(x,y); 
+            else ctx.lineTo(x,y);
+        }
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+        const [x, y] = path[currentFrame];
+        ctx.fillStyle = COLORS[cls];
+        ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2); 
+        ctx.fill();
+  });
+}

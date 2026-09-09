@@ -24,7 +24,7 @@ This is an opensourced web based Computer Assisted Semen Analysis program. Provi
 
 ## Instructions
 
-1. click on Upload video Button
+1. Click on Upload video Button
 2. Upload your video
 3. Enter the Threshold values
 4. Click 'Reanalyze'

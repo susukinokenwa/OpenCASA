@@ -71,3 +71,4 @@ BCF(Hz) — Beat-Cross Frequency
 
 >How many times per second the wiggling path crosses back and forth over its own smoothed centerline. Measures the speed of the wiggle (like counting how fast a tail is flicking side to side), independent of how big each wiggle is (that's ALH's job) or how fast the cell is actually traveling forward (that's VCL/VAP/VSL's job).
 
+###### Disclaimer: This tool performs pixel-brightness threshold segmentation and tracks cell centroids frame-by-frame using a nearest-neighbor algorithm inside the browser. As a lightweight demonstration, it is not a medical-grade CASA algorithm and the results are for reference only.

@@ -185,7 +185,8 @@ function computeMetrics(path, p){
     const WOB = VCL > 0 ? VAP / VCL : 0;
 
     let devs = [];
-    for(let i=0;i<n;i++) devs.push(Math.hypot(path[i][0]-smoothed[i][0], path[i][1]-smoothed[i][1]));
+    for(let i = 0;i < n; i++) 
+        devs.push(Math.hypot(path[i][0]-smoothed[i][0], path[i][1]-smoothed[i][1]));
     const meanDev = avg(devs);
     const ALH = meanDev*2*p.calibration;
 
@@ -457,7 +458,7 @@ function runVideoDetectionPipeline(){
     } else {
         setStatus(`Analysis complete! A total of ${validRows.length} valid sperm trajectories were tracked from your uploaded video.`);
     }
-    renderAll();
+    renderAll();//////////////////////
 }
 
 // stuff for demo -------------------------
@@ -487,6 +488,83 @@ function renumberValidRows(){
     .forEach((row, i) => { row.cell.id = i + 1; });
 }
 
+
+//summarize
+function summarize(){
+    if(!validRows.length) return null;
+    const total = validRows.length;// calculate final averages
+    const pr = validRows.filter(r => r.cls === "PR").length;
+    const np = validRows.filter(r => r.cls === "NP").length;
+    const im = validRows.filter(r => r.cls === "IM").length;
+    const a = key => avg(validRows.map(r => r.metrics[key]));
+    return {
+        total, pr, np, im,
+        motility: ( pr + np ) / total * 100,
+        progressive: pr / total * 100,
+        VCL: a("VCL"), VSL: a("VSL"), VAP: a("VAP"),
+        LIN: a("LIN"), STR: a("STR"), WOB :a("WOB"),
+        ALH: a("ALH"), BCF: a("BCF")
+    };
+}
+
+function setStatus(msg, warn){
+    document.getElementById("statusMsg").textContent = msg;
+    document.getElementById("statusBox").classList.toggle("warn", !!warn);
+}
+
+///////////////////Main Render...?
+function renderAll(){
+    const s = summarize();
+
+    document.getElementById("statTotal").textContent = s ? s.total : "-";
+    document.getElementById("statMotility").textContent = s ? fmt(s.motility) + "%" : "-";
+    document.getElementById("statMotilitySub").textContent = s ? `(${s.pr+s.np} / ${s.total})` : "";
+    document.getElementById("statProgressive").textContent = s ? fmt(s.progressive)+"%" : "-";
+    document.getElementById("statProgressiveSub").textContent = s ? `(${s.pr} / ${s.total})` : "";
+    document.getElementById("legendPR").textContent = s ? `${s.pr} (${fmt(s.pr / s.total * 100, 0)}%)` : "-";
+    document.getElementById("legendNP").textContent = s ? `${s.np} (${fmt(s.np / s.total * 100, 0)}%)` : "-";
+    document.getElementById("legendIM").textContent = s ? `${s.im} (${fmt(s.im / s.total * 100, 0)}%)` : "-";
+
+    document.getElementById("mVCL").innerHTML = (s ? fmt(s.VCL) : "-") + '<span class="metric-unit">µm/s</span>';
+    document.getElementById("mVSL").innerHTML = (s ? fmt(s.VSL) : "-") + '<span class="metric-unit">µm/s</span>';
+    document.getElementById("mVAP").innerHTML = (s ? fmt(s.VAP) : "-") + '<span class="metric-unit">µm/s</span>';
+    document.getElementById("mLIN").textContent = s ? fmt(s.LIN, 2) : "-";
+    document.getElementById("mSTR").textContent = s ? fmt(s.STR,2) : "-";
+    document.getElementById("mWOB").textContent = s ? fmt(s.WOB,2) : "-";
+    document.getElementById("mALH").innerHTML = (s ? fmt(s.ALH, 2) : "-") + '<span class="metric-unit">µm</span>';
+    document.getElementById("mBCF").innerHTML = (s ? fmt(s.BCF,1) : "-") + '<span class="metric-unit">Hz</span>';
+
+    document.getElementById("btnExport").disabled = validRows.length === 0;
+
+    const tag = document.getElementById("sourceTag");
+    if(sourceType === "demo"){
+        tag.style.display = "inline-block"; 
+        tag.className = "source-tag demo"; 
+        tag.textContent = "Demo Data";
+    } else if(sourceType === "video"){
+        tag.style.display = "inline-block"; 
+        tag.className = "source-tag video"; 
+        tag.textContent = "Real Video Analysis";
+    } else {
+        tag.style.display = "none";
+    }
+
+    //   renderHistograms(); ////// these r not written yet gg///
+    //   renderTable();
+    //   drawCanvas();
+
+    document.getElementById("frameLabel").textContent = `Frame: ${analyzed?currentFrame:0} / ${analyzed?N_FRAMES:0}`;
+    const slider = document.getElementById("frameSlider");
+    slider.max = Math.max(0, N_FRAMES-1);
+    slider.disabled = !analyzed;
+    slider.value = currentFrame;
+    document.getElementById("btnPlay").disabled = !analyzed;
+    document.getElementById("btnPlay").textContent = playing ? "❚❚" : "▶"; // [laybtn]
+}
+
+// function  renderHistograms(){}
+//  function renderTable(){}
+//  function drawCanvas(){}
 
 // final Rendering
 const displayTmpCanvas = document.createElement("canvas");// canvas
@@ -527,6 +605,7 @@ function drawCanvas(){
             }
             displayTmpCanvas.width = w; 
             displayTmpCanvas.height = h;
+            console.log(`${w} ::: ${h}`);///////////////////////////////////////////////////////
             displayTmpCanvas.getContext("2d").putImageData(bin, 0, 0);
             ctx.imageSmoothingEnabled = false;
             ctx.drawImage(displayTmpCanvas, offsetX, offsetY, drawW, drawH);
@@ -590,8 +669,8 @@ function drawCanvas(){
         ctx.beginPath();
         for(let i = start; i <= currentFrame; i++){
             const [x,y] = path[i];
-            if(i === start) ctx.moveTo(x,y); 
-            else ctx.lineTo(x,y);
+            if(i === start) ctx.moveTo(x, y); 
+            else ctx.lineTo(x, y);
         }
         ctx.stroke();
         ctx.globalAlpha = 1;
@@ -601,3 +680,68 @@ function drawCanvas(){
         ctx.fill();
   });
 }
+
+function stopPlayback(){
+    playing = false;
+    if(playTimer) clearInterval(playTimer);
+}
+
+function handleLoadDemo(){
+    stopPlayback();
+    sourceType = "demo";
+    workDims = { w: 220, h: 150 };
+    N_FRAMES = DEMO_FRAMES;
+    document.getElementById("footerNote").textContent =
+        "Demo Mode: The following sperm trajectories are randomly simulated by the frontend for demonstration purposes only, and do not represent actual video analysis results.";
+    setStatus("Loading simulated demonstration data and executing detection and tracking...");
+    setTimeout(()=>{
+        rawCells = generateRawCells();
+        recomputeDemo();
+        analyzed = true;
+        currentFrame = 0;
+        document.getElementById("btnReanalyze").disabled = false;
+        setStatus(`Analysis complete! A total of ${validRows.length} valid sperm trajectories were tracked.`);
+        renderAll();
+    }, 250);
+}
+
+async function handleFileChosen(e){
+    const f = e.target.files && e.target.files[0];
+    if(!f) return;
+    stopPlayback();
+    analyzed = false;
+    renderAll();
+    setStatus(`Reading "${f.name}"...`);
+    try{
+        const { frames, workW, workH } = await captureVideoFrames(f);
+        videoFrames = frames;
+        workDims = { w: workW, h: workH };
+        sourceType = "video";
+        N_FRAMES = frames.length;
+        document.getElementById("footerNote").textContent =
+        "Real Video Analysis Mode: This tool performs pixel-brightness threshold segmentation and tracks cell centroids frame-by-frame using a nearest-neighbor algorithm inside the browser. As a lightweight demonstration, it is not a medical-grade CASA algorithm and the results are for reference only.";
+        runVideoDetectionPipeline();
+    } catch(err){
+        setStatus(err.message || "Error loading video. Please try another file.", true);
+        analyzed = false;
+        renderAll();
+    }
+    e.target.value = "";
+}
+
+
+
+///Renders
+
+
+
+//wiring up events with elements
+document.getElementById("btnLoadDemo").addEventListener("click", handleLoadDemo);
+document.getElementById("threshold").addEventListener("input",(e)=>{
+  params.threshold = Number(e.target.value);
+  document.getElementById("lblThreshold").textContent = `Threshold ${params.threshold}`;
+});
+document.getElementById("prSTR").addEventListener("input",(e)=>{
+  params.prSTR = Number(e.target.value);
+  document.getElementById("lblPrSTR").textContent = `Progressive STR Threshold (PR STR)  ${params.prSTR.toFixed(2)}`;
+});

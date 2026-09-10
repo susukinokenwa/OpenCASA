@@ -36,7 +36,6 @@ p.s. click on the demo video button to se a sample video
 - FPS needs to be entered by user, If value entered is higher than the actual fps of the uploaded video, the data captured will produce duplicated frames causing inaccuracy in Data.
 - Cells on the edge of video might produce slightly inaccurate results due to tracked area of cell might be smaller than the actual size.
 
-
 ## Dictionary
 VCL(um/s) — Curvilinear Velocity
 

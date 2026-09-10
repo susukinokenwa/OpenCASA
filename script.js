@@ -2,9 +2,9 @@
 
 // Constants----------------------------
 const CANVAS_W = 660, CANVAS_H = 400;
-const FIELD_L = 90, FIELD_R = CANVAS_W - 90;
+const FIELD_L = 0, FIELD_R = CANVAS_W;
 const DEMO_FRAMES = 80;
-const RAW_CELL_COUNT = 46;// fake demo cells count
+const RAW_CELL_COUNT = 66;// fake demo cells count
 const MAX_VIDEO_FRAMES = 80;   // cap on how many frames we extract from an uploaded video
 const ANALYSIS_MAX_W = 1920;   // hard ceiling only - we analyze at the video's native resolution
 
@@ -23,13 +23,13 @@ function avg(arr){
     return 0;
 }
 function choice(weights){
-  const r = Math.random(); let acc = 0;
-  for(const [k,w] of weights){ acc += w; if(r <= acc) return k; }
-  return weights[weights.length-1][0];
+    const r = Math.random(); let acc = 0;
+    for(const [k, w] of weights){ acc += w; if(r <= acc) return k; }
+    return weights[weights.length-1][0];
 }
 
 // filters out invalid display for invalid numbers such as NaN etc and displays "-" instead...
-function fmt(v,d=1){ 
+function fmt(v,d = 1){ 
     if(v === undefined || v === null || isNaN(v)) {
         return "-" 
     }
@@ -38,18 +38,18 @@ function fmt(v,d=1){
 
 // parameters from html or default
 let params = {
-  threshold: 30, 
-  calibration: 1.2, 
-  frameRate: 60,
-  minArea: 10, 
-  maxArea: 100, 
-  searchRadius: 25, 
-  minPathLength: 10,
-  prVAP: 25, 
-  prSTR: 0.8, 
-  motileVCL: 5,
-  invertImage: true, 
-  backgroundSubtraction: true
+    threshold: 30, 
+    calibration: 1.2, 
+    frameRate: 60,
+    minArea: 10, 
+    maxArea: 100, 
+    searchRadius: 25, 
+    minPathLength: 10,
+    prVAP: 25, 
+    prSTR: 0.8, 
+    motileVCL: 5,
+    invertImage: true, 
+    backgroundSubtraction: true
 };
 
 let sourceType = "none";     // "none" / "demo" / "video"
@@ -150,13 +150,13 @@ function computeMetrics(path, p){
     // vcl, point to point
     let vclPx = 0;
     for(let i = 1; i < n; i++) {
-        vclPx += Math.hypot(path[i][0] - path[i-1][0], path[i][1] - path[i-1][1]);
+        vclPx += Math.hypot(path[i][0] - path[i - 1][0], path[i][1] - path[i - 1][1]);
     }
     // vsl : final - initial
     const vslPx = Math.hypot(path[n-1][0]-path[0][0], path[n-1][1]-path[0][1]);
 
     // window for how much pts averaged together
-    const win = Math.max(3, Math.min(n, Math.round(p.frameRate/6)));
+    const win = Math.max(3, Math.min(n, Math.round(p.frameRate / 6)));
     const smoothed = [];
     for(let i = 0; i < n; i++){
         // pts frame but with limits in case it crash ar edges
@@ -173,8 +173,8 @@ function computeMetrics(path, p){
 
     // vap
     let vapPx = 0;
-    for(let i=1;i<n;i++) {
-        vapPx += Math.hypot(smoothed[i][0]-smoothed[i-1][0], smoothed[i][1]-smoothed[i-1][1]);
+    for(let i = 1 ; i < n ; i++) {
+        vapPx += Math.hypot(smoothed[i][0]-smoothed[i - 1][0], smoothed[i][1] - smoothed[i - 1][1]);
     }
 
     const VCL = (vclPx * p.calibration) / durationSec;
@@ -186,23 +186,23 @@ function computeMetrics(path, p){
 
     let devs = [];
     for(let i = 0;i < n; i++) 
-        devs.push(Math.hypot(path[i][0]-smoothed[i][0], path[i][1]-smoothed[i][1]));
+        devs.push(Math.hypot(path[i][0] - smoothed[i][0], path[i][1] - smoothed[i][1]));
     const meanDev = avg(devs);
     const ALH = meanDev*2*p.calibration;
 
     const lateral = [];
-    for(let i=0;i<n;i++){
-        const i0 = Math.max(0,i-1), i1 = Math.min(n-1,i+1);
+    for(let i = 0 ; i < n ; i++){
+        const i0 = Math.max(0, i - 1), i1 = Math.min(n - 1, i + 1);
         const tx = smoothed[i1][0]-smoothed[i0][0], ty = smoothed[i1][1]-smoothed[i0][1];
         const len = Math.hypot(tx,ty)||1;
         const nx = -ty/len, ny = tx/len;
-        lateral.push((path[i][0]-smoothed[i][0])*nx + (path[i][1]-smoothed[i][1])*ny);
+        lateral.push((path[i][0] - smoothed[i][0]) * nx + (path[i][1] - smoothed[i][1]) * ny);
     }
     let crossings = 0;
-    for(let i=1;i<lateral.length;i++){
-        if(Math.sign(lateral[i]) !== Math.sign(lateral[i-1]) && lateral[i]!==0) crossings++;
+    for(let i = 1 ; i < lateral.length ; i++){
+        if(Math.sign(lateral[i]) !== Math.sign(lateral[i - 1]) && lateral[i] !== 0) crossings++;
     }
-    const BCF = crossings/2/durationSec;
+    const BCF = crossings / 2 / durationSec;
 
     return { VCL, VSL, VAP, LIN, STR, WOB, ALH, BCF };
 }
@@ -243,7 +243,7 @@ async function captureVideoFrames(file){
     //promise
     await new Promise(function (resolve, reject){
         video.onloadedmetadata = resolve; // if video loaded
-        video.onerror = ()=>reject(new Error("Error Reading the File")); // if video didnt
+        video.onerror = () => reject(new Error("Error Reading the File")); // if video didnt
     })
 
     const vw = video.videoWidth || 320, vh = video.videoHeight || 240;
@@ -260,7 +260,8 @@ async function captureVideoFrames(file){
     }
     // hidden canvas to grab image frames
     const tmp = document.createElement("canvas");
-    tmp.width = workW; tmp.height = workH;
+    tmp.width = workW; 
+    tmp.height = workH;
     const tctx = tmp.getContext("2d", { willReadFrequently: true });
 
     const frames = []; // array of each frame's data
@@ -437,13 +438,13 @@ function runVideoDetectionPipeline(){
 
     analysisRows = rawTracks.map(t=>{
         const cellObj = { 
-            id:t.id, 
-            area:t.area, 
-            width:t.width, 
-            height:t.height, 
-            circularity:t.circularity, 
-            trackLength:t.trackLength, 
-            intensity:100 
+            id: t.id, 
+            area: t.area, 
+            width: t.width, 
+            height: t.height, 
+            circularity: t.circularity, 
+            trackLength: t.trackLength, 
+            intensity: 100 
         };
         const metrics = computeMetrics(t.points, params);
         const cls = classify(cellObj, metrics, params);
@@ -476,7 +477,7 @@ function recomputeDemo(){
         const cls = classify(cell, metrics, params);
         return { cell, path, metrics, cls };
     });
-    validRows = analysisRows.filter(r=>r.cls);
+    validRows = analysisRows.filter(r => r.cls);
     renumberValidRows();
 }
 
@@ -551,8 +552,8 @@ function renderAll(){
         tag.style.display = "none";
     }
 
-    //   renderHistograms(); ////// these r not written yet gg///
-    //   renderTable();
+    renderHistograms(); ////// these r not written yet gg///
+    renderTable();
     drawCanvas();
 
     document.getElementById("frameLabel").textContent = `Frame: ${analyzed?currentFrame:0} / ${analyzed?N_FRAMES:0}`;
@@ -565,11 +566,98 @@ function renderAll(){
 }
 
 function renderHistograms(){
+    drawBarChart("histVCL", bucketize(validRows.map(r=>r.metrics.VCL),10,130), "#818cf8");
+    drawBarChart("histVSL", bucketize(validRows.map(r=>r.metrics.VSL),10,130), "#34d399");
+    drawBarChart("histVAP", bucketize(validRows.map(r=>r.metrics.VAP),10,130), "#fbbf24");
+}
 
+
+function drawBarChart(canvasId, data, color){
+    const canvas = document.getElementById(canvasId);
+    const dpr = window.devicePixelRatio || 1;
+    const cssW = canvas.clientWidth || 200, cssH = 150;
+    canvas.width = cssW * dpr; canvas.height = cssH * dpr;
+    const ctx = canvas.getContext("2d");
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, cssW, cssH);
+    const padL = 22, padB = 26, padT = 6, padR = 4;
+    const chartW = cssW - padL - padR, chartH = cssH - padB - padT;
+    const maxCount = Math.max(1, ...data.map(d => d.count));
+    const barW = chartW/data.length;
+
+    ctx.strokeStyle = "#1e293b"; 
+    ctx.lineWidth = 1;
+    const gridLines = 4;
+    for(let i = 0 ; i <= gridLines ; i++){
+        const y = padT + chartH - (chartH * i / gridLines);
+        ctx.beginPath(); 
+        ctx.moveTo(padL, y); 
+        ctx.lineTo(padL + chartW, y); 
+        ctx.stroke();
+    }
+    ctx.fillStyle = "#64748b"; 
+    ctx.font = "9px sans-serif"; 
+    ctx.textAlign="right"; 
+    ctx.textBaseline="middle";
+    for(let i = 0; i<= gridLines; i++){
+        const val = Math.round(maxCount * i / gridLines);
+        const y = padT + chartH - (chartH * i / gridLines);
+        ctx.fillText(val, padL - 4, y);
+    }
+
+    data.forEach((d, i)=>{
+        const h = (d.count / maxCount) * chartH;
+        const x = padL + i * barW + barW * 0.12;
+        const w = barW * 0.76;
+        const y = padT + chartH - h;
+        ctx.fillStyle = color;
+        ctx.fillRect(x, y, w, h);
+    });
+
+    ctx.fillStyle = "#64748b"; 
+    ctx.font = "7px sans-serif"; 
+    ctx.textAlign="center"; 
+    ctx.textBaseline="top";
+    data.forEach((d, i)=>{
+        if(i % 2 !== 0) return;
+        const x = padL + i * barW + barW / 2;
+        ctx.save();
+        ctx.translate(x, padT + chartH + 4);
+        ctx.rotate(-Math.PI / 4);
+        ctx.textAlign = "right";
+        ctx.fillText(d.label, 0, 0);
+        ctx.restore();
+    });
+}
+
+
+function bucketize(values, binSize, maxBin){
+    const bins = {};
+    for(let b = 0; b < maxBin ; b += binSize) bins[b]=0;
+    values.forEach(v => {
+        const b = Math.min(maxBin - binSize, Math.max(0, Math.floor( v / binSize ) * binSize));
+        bins[b] = (bins[b] || 0 ) + 1;
+    });
+    return Object.entries(bins).map(([b, count]) => ( {label:`${b} - ${Number(b) + binSize}`, count:Number(count)}));
 }
 
 function renderTable(){
-
+    document.getElementById("trackCount").textContent = validRows.length;
+    const tbody = document.getElementById("tableBody");
+    if(!validRows.length){
+        tbody.innerHTML = '<tr><td colspan="5" class="table-empty">No Data</td></tr>';
+        return;
+    }
+    const sorted = validRows.slice().sort((a, b) => a.cell.id - b.cell.id);
+    tbody.innerHTML = sorted.map(({cell, metrics, cls})=>`
+        <tr>
+        <td>${cell.id}</td>
+        <td><span class="badge" style="color:${COLORS[cls]}; background:${COLORS[cls]}22">${LABEL_TABLE[cls]}</span></td>
+        <td>${metrics.VCL.toFixed(1)}</td>
+        <td>${metrics.VSL.toFixed(1)}</td>
+        <td>${metrics.VAP.toFixed(1)}</td>
+        </tr>
+    `).join("");
 }
 
 
@@ -581,7 +669,7 @@ function workToDisplayTransform(){
     const w = workDims.w, h = workDims.h;
     const scale = Math.min(CANVAS_W / w, CANVAS_H / h);
     const drawW = w*scale, drawH = h*scale;
-    const offsetX = (CANVAS_W-drawW)/2, offsetY = (CANVAS_H-drawH)/2;
+    const offsetX = (CANVAS_W-drawW) / 2, offsetY = (CANVAS_H - drawH) / 2;
     return { scale, drawW, drawH, offsetX, offsetY };
 }
 
@@ -651,21 +739,23 @@ function drawCanvas(){
     }
 
   // demo (simulated) mode -----------
-    if(showBinary){
-        ctx.fillStyle = "#fff";
-        validRows.forEach(({path}) => {
-            if(currentFrame >= path.length) return;
-            const [x,y] = path[currentFrame];
-            ctx.beginPath(); 
-            ctx.arc(x, y, 2.4, 0, Math.PI * 2); 
-            ctx.fill();
-        });
-        return;
-    }
+    // if(showBinary){
+    //     ctx.fillStyle = "#ffffff";
+    //     validRows.forEach(({path}) => {
+    //         if(currentFrame >= path.length) return;
+    //         const [x, y] = path[currentFrame];
+    //         ctx.beginPath(); 
+    //         ctx.arc(x, y, 2.4, 0, Math.PI * 2); 
+    //         ctx.fill();
+    //     });
+    //     //return;
+    // }
 
-    const bg = params.invertImage ? "#e7e9ee" : "#0b0d12";
+    // const bg = params.invertImage ? "#e7e9ee" : "#0b0d12";
+
+    const bg = showBinary ? "#000000" : (params.invertImage ? "#e7e9ee" : "#0b0d12");
     ctx.fillStyle = bg; 
-    ctx.fillRect(FIELD_L,0,FIELD_R-FIELD_L,CANVAS_H);
+    ctx.fillRect(FIELD_L, 0, FIELD_R-FIELD_L, CANVAS_H);
 
     const trail = 26;
     validRows.forEach(({path, cls}) => {
@@ -741,13 +831,28 @@ async function handleFileChosen(e){
 
 ///Renders
 function handleReanalyze(){
-
+    stopPlayback();
+    currentFrame = 0;
+    if(sourceType === "video"){
+        if(!videoFrames) return;
+        setTimeout(() => { 
+            runVideoDetectionPipeline(); 
+        }, 30);
+    } else if(sourceType === "demo"){
+        if(!rawCells) return;
+        setStatus("Analyzing data with new parameters...");
+        setTimeout(()=>{
+            recomputeDemo();
+            setStatus(`Analysis complete! A total of ${validRows.length} valid sperm trajectories were tracked.`);
+            renderAll();
+        }, 200);
+    }
 }
 
 function togglePlay(){
     playing = !playing;
     if(playing){
-        playTimer = setInterval(()=>{
+        playTimer = setInterval(() => {
             currentFrame = (currentFrame >= N_FRAMES-1) ? 0 : currentFrame+1;
             renderAll();
         }, 70);
@@ -757,8 +862,38 @@ function togglePlay(){
     renderAll();
 }
 
+/////////export
 function exportCSV(){
-
+    const header = ["Sperm ID","Classification","VCL(um/s)","VSL(um/s)","VAP(um/s)","LIN","STR","WOB","ALH(um)","BCF(Hz)","Avg Area(px)","Avg Width(px)","Avg Height(px)","Avg Circularity","Frames Tracked"];
+    const lines = [header.join(",")];
+    validRows.slice().sort((a, b) => a.cell.id - b.cell.id).forEach(({cell, metrics, cls}) => {
+    lines.push([
+        cell.id, 
+        LABEL_CSV[cls],
+        metrics.VCL.toFixed(2), 
+        metrics.VSL.toFixed(2), 
+        metrics.VAP.toFixed(2),
+        metrics.LIN.toFixed(3), 
+        metrics.STR.toFixed(3), 
+        metrics.WOB.toFixed(3),
+        metrics.ALH.toFixed(2), 
+        metrics.BCF.toFixed(2),
+        cell.area.toFixed(1), 
+        cell.width.toFixed(1), 
+        cell.height.toFixed(1),
+        cell.circularity.toFixed(3), 
+        cell.trackLength
+    ].join(","));
+  });
+    const blob = new Blob([lines.join("\n")], {type: "text/csv;charset=utf-8;"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; 
+    a.download = `CASA_Analysis_Report_${Date.now()}.csv`;
+    document.body.appendChild(a); 
+    a.click(); 
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
 }
 
 

@@ -36,7 +36,6 @@ p.s. click on the demo video button to se a sample video
 - FPS needs to be entered by user, If value entered is higher than the actual fps of the uploaded video, the data captured will produce duplicated frames causing inaccuracy in Data.
 - Cells on the edge of video might produce slightly inaccurate results due to tracked area of cell might be smaller than the actual size.
 
-###### Made by Skyler Sun:: my attempt to learn more js :)
 
 ## Dictionary
 VCL(um/s) — Curvilinear Velocity
@@ -72,3 +71,5 @@ BCF(Hz) — Beat-Cross Frequency
 >How many times per second the wiggling path crosses back and forth over its own smoothed centerline. Measures the speed of the wiggle (like counting how fast a tail is flicking side to side), independent of how big each wiggle is (that's ALH's job) or how fast the cell is actually traveling forward (that's VCL/VAP/VSL's job).
 
 ###### Disclaimer: This tool performs pixel-brightness threshold segmentation and tracks cell centroids frame-by-frame using a nearest-neighbor algorithm inside the browser. As a lightweight demonstration, it is not a medical-grade CASA algorithm and the results are for reference only.
+
+###### Made by Skyler Sun:: my attempt to learn more js :)

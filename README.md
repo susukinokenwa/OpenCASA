@@ -37,6 +37,16 @@ p.s. click on the demo video button to se a sample video
 - Cells on the edge of video might produce slightly inaccurate results due to tracked area of cell might be smaller than the actual size.
 
 ## Dictionary
+PR — Progressive Motility
+
+>Sperm move actively in a straight line or large circles with forward momentum. This is the only type of movement that can successfully reach and fertilize an egg. 
+
+NP — Non-Progressive Motility
+>Sperm show movement, such as twitching tails or swimming in tight circles, but they do not travel forward. They cannot navigate the female reproductive tract.
+
+IM — Immotile Sperm
+>Sperm show no movement or activity at all. They are considered dead or non-viable for fertilization.
+
 VCL(um/s) — Curvilinear Velocity
 
 >The speed measured by tracing every twist and turn of the actual, literal path the cell took. Computed by summing the distance between every consecutive pair of tracked positions (Math.hypot between each frame's point and the previous one), then converting to µm/s via your Calibration and Frame Rate settings. This is the highest of the three velocity numbers, since it includes every bit of the flagellar wiggle as "distance traveled," not just net progress.
@@ -68,6 +78,7 @@ ALH(um) — Amplitude of Lateral Head Displacement
 BCF(Hz) — Beat-Cross Frequency
 
 >How many times per second the wiggling path crosses back and forth over its own smoothed centerline. Measures the speed of the wiggle (like counting how fast a tail is flicking side to side), independent of how big each wiggle is (that's ALH's job) or how fast the cell is actually traveling forward (that's VCL/VAP/VSL's job).
+
 
 ###### Disclaimer: This tool performs pixel-brightness threshold segmentation and tracks cell centroids frame-by-frame using a nearest-neighbor algorithm inside the browser. As a lightweight demonstration, it is not a medical-grade CASA algorithm and the results are for reference only.
 

@@ -1,6 +1,10 @@
 # CASA Web
 This is an opensourced web based Computer Assisted Semen Analysis program. Providing a quick and simple way to analyze semen motality. 
 
+![sample image 1](./assets/Screenshot%202026-09-11%20112517.png)
+![sample image 2](./assets/Screenshot%202026-09-11%20112551.png)
+
+
 ## Features
 - Each cell will be classified into one of the three categories: 
     1. PR (Progressive)
